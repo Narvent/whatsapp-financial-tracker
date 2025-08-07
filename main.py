@@ -299,6 +299,11 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.get("/webhook")
+async def webhook_test():
+    """Test endpoint to verify webhook is accessible"""
+    return {"message": "Webhook endpoint is accessible", "status": "ok"}
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """Handle incoming WhatsApp messages via Twilio webhook"""
