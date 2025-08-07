@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Members - WhatsApp Financial Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-users text-primary me-2"></i>
+                Members Management
+            </h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                <i class="fas fa-user-plus me-1"></i>Add Member
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>All Members
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if members %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Default Amount</th>
+                                <th>Total Contributions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-user text-primary me-2"></i>
+                                    {{ member.name }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ member.category }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">KES {{ member.default_amount }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ member.contributions|length if member.contributions else 0 }}</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary view-member-btn" data-member-id="{{ member.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning edit-member-btn" data-member-id="{{ member.id }}" data-member-name="{{ member.name }}" data-member-category="{{ member.category }}" data-member-amount="{{ member.default_amount }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-member-btn" data-member-id="{{ member.id }}" data-member-name="{{ member.name }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No members found. Start by adding a member!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Add New Member
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addMemberForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="memberName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="memberName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="memberCategory" class="form-label">Category</label>
+                        <select class="form-select" id="memberCategory" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Parents">Parents (500 KES)</option>
+                            <option value="GenMillennial">GenMillennial (300 KES)</option>
+                            <option value="GenAlpha">GenAlpha (50 KES)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defaultAmount" class="form-label">Default Amount (KES)</label>
+                        <input type="number" class="form-control" id="defaultAmount" name="default_amount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Member Modal -->
+<div class="modal fade" id="viewMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user me-2"></i>Member Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewMemberContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Member Modal -->
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Member
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editMemberForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editMemberId" name="member_id">
+                    <div class="mb-3">
+                        <label for="editMemberName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="editMemberName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editMemberCategory" class="form-label">Category</label>
+                        <select class="form-select" id="editMemberCategory" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Parents">Parents (500 KES)</option>
+                            <option value="GenMillennial">GenMillennial (300 KES)</option>
+                            <option value="GenAlpha">GenAlpha (50 KES)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editMemberAmount" class="form-label">Default Amount (KES)</label>
+                        <input type="number" class="form-control" id="editMemberAmount" name="default_amount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Update Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Add Member Form
+    $('#addMemberForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '/api/members',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Member added successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error adding member: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // Edit Member Form
+    $('#editMemberForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const memberId = $('#editMemberId').val();
+        
+        $.ajax({
+            url: '/api/members/' + memberId,
+            method: 'PUT',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Member updated successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error updating member: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // View Member Button
+    $(document).on('click', '.view-member-btn', function() {
+        const memberId = $(this).data('member-id');
+        viewMember(memberId);
+    });
+
+    // Edit Member Button
+    $(document).on('click', '.edit-member-btn', function() {
+        const memberId = $(this).data('member-id');
+        const name = $(this).data('member-name');
+        const category = $(this).data('member-category');
+        const amount = $(this).data('member-amount'); // Get the amount from data attribute
+        editMember(memberId, name, category, amount);
+    });
+
+    // Delete Member Button
+    $(document).on('click', '.delete-member-btn', function() {
+        const memberId = $(this).data('member-id');
+        const memberName = $(this).data('member-name');
+        deleteMember(memberId, memberName);
+    });
+
+    // Auto-fill default amount based on category
+    $('#memberCategory, #editMemberCategory').on('change', function() {
+        const category = $(this).val();
+        let amount = 0;
+        
+        switch(category) {
+            case 'Parents':
+                amount = 500;
+                break;
+            case 'GenMillennial':
+                amount = 300;
+                break;
+            case 'GenAlpha':
+                amount = 50;
+                break;
+        }
+        
+        if ($(this).attr('id') === 'memberCategory') {
+            $('#defaultAmount').val(amount);
+        } else {
+            $('#editMemberAmount').val(amount);
+        }
+    });
+});
+
+function viewMember(memberId) {
+    $.ajax({
+        url: '/api/members/' + memberId,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const member = response.member;
+                let contributionsHtml = '';
+                
+                if (member.contributions && member.contributions.length > 0) {
+                    contributionsHtml = '<table class="table table-sm"><thead><tr><th>Month</th><th>Amount</th><th>Status</th></tr></thead><tbody>';
+                    member.contributions.forEach(function(contrib) {
+                        const status = contrib.paid ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning">Pending</span>';
+                        contributionsHtml += `<tr><td>${contrib.month}</td><td>KES ${contrib.amount}</td><td>${status}</td></tr>`;
+                    });
+                    contributionsHtml += '</tbody></table>';
+                } else {
+                    contributionsHtml = '<p class="text-muted">No contributions yet.</p>';
+                }
+                
+                const content = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Member Information</h6>
+                            <p><strong>Name:</strong> ${member.name}</p>
+                            <p><strong>Category:</strong> <span class="badge bg-info">${member.category}</span></p>
+                            <p><strong>Default Amount:</strong> <span class="badge bg-success">KES ${member.default_amount}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contributions History</h6>
+                            ${contributionsHtml}
+                        </div>
+                    </div>
+                `;
+                
+                $('#viewMemberContent').html(content);
+                $('#viewMemberModal').modal('show');
+            }
+        },
+        error: function(xhr) {
+            alert('Error loading member details: ' + xhr.responseJSON.detail);
+        }
+    });
+}
+
+function editMember(memberId, name, category, amount) {
+    $('#editMemberId').val(memberId);
+    $('#editMemberName').val(name);
+    $('#editMemberCategory').val(category);
+    $('#editMemberAmount').val(amount); 
+    $('#editMemberModal').modal('show');
+}
+
+function deleteMember(memberId, memberName) {
+    if (confirm(`Are you sure you want to delete ${memberName}? This action cannot be undone.`)) {
+        $.ajax({
+            url: '/api/members/' + memberId,
+            method: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    alert('Member deleted successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error deleting member: ' + xhr.responseJSON.detail);
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

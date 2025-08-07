@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - WhatsApp Financial Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-bar text-primary me-2"></i>
+            Financial Reports
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Generate Reports
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Monthly Report</h6>
+                        <p class="text-muted">Generate a detailed report for a specific month</p>
+                        <div class="input-group mb-3">
+                            <select class="form-select" id="monthSelect">
+                                <option value="">Select Month</option>
+                                {% for month in months %}
+                                <option value="{{ month.name }}">{{ month.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-primary" type="button" onclick="generateReport()">
+                                <i class="fas fa-download me-1"></i>Generate Report
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Quick Stats</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-primary" id="totalMembers">-</h4>
+                                        <small class="text-muted">Total Members</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-success" id="totalContributions">-</h4>
+                                        <small class="text-muted">Total Contributions</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Report Results
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="reportContent">
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Select a month and generate a report to see the results here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Load initial stats
+    loadStats();
+});
+
+function loadStats() {
+    // Get data from the page context - use proper Jinja2 syntax
+    const totalMembers = parseInt('{{ members|length if members else 0 }}');
+    const totalContributions = parseInt('{{ contributions|length if contributions else 0 }}');
+    
+    $('#totalMembers').text(totalMembers);
+    $('#totalContributions').text(totalContributions);
+}
+
+function generateReport() {
+    const monthName = $('#monthSelect').val();
+    
+    if (!monthName) {
+        alert('Please select a month');
+        return;
+    }
+    
+    // Show loading
+    $('#reportContent').html(`
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Generating report for ${monthName}...</p>
+        </div>
+    `);
+    
+    $.ajax({
+        url: '/api/reports/' + encodeURIComponent(monthName),
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                displayReport(response.report, monthName);
+            } else {
+                $('#reportContent').html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error generating report: ${response.message || 'Unknown error'}
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            $('#reportContent').html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error generating report: ${xhr.responseJSON?.detail || 'Unknown error'}
+                </div>
+            `);
+        }
+    });
+}
+
+function displayReport(report, monthName) {
+    // Parse the report text and format it nicely
+    const reportLines = report.split('\n');
+    let html = `<h4>Report for ${monthName}</h4><hr>`;
+    
+    reportLines.forEach(line => {
+        if (line.trim()) {
+            if (line.includes('**')) {
+                // Bold text
+                const boldText = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                html += `<p class="mb-2">${boldText}</p>`;
+            } else if (line.startsWith('•')) {
+                // List item
+                html += `<li>${line.substring(1).trim()}</li>`;
+            } else if (line.startsWith('📊') || line.startsWith('💰') || line.startsWith('✅')) {
+                // Section headers
+                html += `<h6 class="mt-3 mb-2">${line}</h6>`;
+            } else {
+                // Regular text
+                html += `<p class="mb-1">${line}</p>`;
+            }
+        }
+    });
+    
+    $('#reportContent').html(html);
+}
+</script>
+{% endblock %}

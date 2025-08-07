@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - WhatsApp Financial Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-line text-primary me-2"></i>
+            Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ total_members }}</div>
+            <div class="stats-label">
+                <i class="fas fa-users me-1"></i>Total Members
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ total_months }}</div>
+            <div class="stats-label">
+                <i class="fas fa-calendar me-1"></i>Active Months
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">{{ total_contributions }}</div>
+            <div class="stats-label">
+                <i class="fas fa-money-bill-wave me-1"></i>Total Contributions
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card">
+            <div class="stats-number">KES {{ "{:,.0f}".format(total_amount) if total_amount else "0" }}</div>
+            <div class="stats-label">
+                <i class="fas fa-coins me-1"></i>Total Amount
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                            <i class="fas fa-user-plus me-1"></i>Add Member
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addContributionModal">
+                            <i class="fas fa-plus me-1"></i>Add Contribution
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addMonthModal">
+                            <i class="fas fa-calendar-plus me-1"></i>Add Month
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="/reports" class="btn btn-primary w-100">
+                            <i class="fas fa-chart-bar me-1"></i>View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Contributions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Contributions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_contributions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Month</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contribution in recent_contributions %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-user text-primary me-2"></i>
+                                    {{ contribution.member.name }}
+                                </td>
+                                <td>{{ contribution.month.name }}</td>
+                                <td>
+                                    <span class="badge bg-success">KES {{ contribution.amount }}</span>
+                                </td>
+                                <td>{{ contribution.paid_at.strftime('%Y-%m-%d %H:%M') if contribution.paid_at else 'N/A' }}</td>
+                                <td>
+                                    {% if contribution.paid %}
+                                    <span class="badge bg-success">Paid</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No contributions yet. Start by adding a contribution!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Add New Member
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addMemberForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="memberName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="memberName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="memberCategory" class="form-label">Category</label>
+                        <select class="form-select" id="memberCategory" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Parents">Parents (500 KES)</option>
+                            <option value="GenMillennial">GenMillennial (300 KES)</option>
+                            <option value="GenAlpha">GenAlpha (50 KES)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defaultAmount" class="form-label">Default Amount (KES)</label>
+                        <input type="number" class="form-control" id="defaultAmount" name="default_amount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Contribution Modal -->
+<div class="modal fade" id="addContributionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Add Contribution
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addContributionForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="contributionMember" class="form-label">Member</label>
+                        <select class="form-select" id="contributionMember" name="member_id" required>
+                            <option value="">Select Member</option>
+                            {% for member in members %}
+                            <option value="{{ member.id }}">{{ member.name }} ({{ member.category }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contributionMonth" class="form-label">Month</label>
+                        <select class="form-select" id="contributionMonth" name="month_id" required>
+                            <option value="">Select Month</option>
+                            {% for month in months %}
+                            <option value="{{ month.id }}">{{ month.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contributionAmount" class="form-label">Amount (KES)</label>
+                        <input type="number" class="form-control" id="contributionAmount" name="amount" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Contribution</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Month Modal -->
+<div class="modal fade" id="addMonthModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>Add New Month
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addMonthForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="monthName" class="form-label">Month Name</label>
+                        <input type="text" class="form-control" id="monthName" name="name" placeholder="e.g., January 2025" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Month</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Add Member Form
+    $('#addMemberForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '/api/members',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Member added successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error adding member: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // Add Contribution Form
+    $('#addContributionForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '/api/contributions',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Contribution added successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error adding contribution: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // Add Month Form
+    $('#addMonthForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '/api/months',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('Month added successfully!');
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                alert('Error adding month: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // Auto-fill default amount based on category
+    $('#memberCategory').on('change', function() {
+        const category = $(this).val();
+        let amount = 0;
+        
+        switch(category) {
+            case 'Parents':
+                amount = 500;
+                break;
+            case 'GenMillennial':
+                amount = 300;
+                break;
+            case 'GenAlpha':
+                amount = 50;
+                break;
+        }
+        
+        $('#defaultAmount').val(amount);
+    });
+});
+</script>
+{% endblock %}

@@ -13,8 +13,16 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./financial_tracker.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Create engine with better error handling
+try:
+    engine = create_engine(DATABASE_URL, echo=False)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create database engine: {e}")
+    # Fallback to SQLite if PostgreSQL fails
+    DATABASE_URL = "sqlite:///./financial_tracker.db"
+    engine = create_engine(DATABASE_URL, echo=False)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 

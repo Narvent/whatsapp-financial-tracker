@@ -19,8 +19,11 @@ from services import WhatsAppService, FinancialService
 # Load environment variables
 load_dotenv()
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (only if not in production or if database doesn't exist)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create database tables: {e}")
 
 app = FastAPI(title="WhatsApp Financial Tracker", version="1.0.0")
 
@@ -67,9 +70,10 @@ async def root(request: Request, db: Session = Depends(get_db)):
         })
     except Exception as e:
         print(f"Dashboard error: {str(e)}")
+        # Return a simple error page if database is not available
         return templates.TemplateResponse("error.html", {
             "request": request,
-            "error": str(e)
+            "error": f"Database connection error: {str(e)}"
         })
 
 @app.get("/members", response_class=HTMLResponse)
@@ -328,7 +332,7 @@ async def webhook(request: Request):
         })
         
         return {"success": True}
-        
+    
     except Exception as e:
         print(f"❌ Webhook error: {e}")
         return {"success": False, "error": str(e)}
@@ -566,4 +570,4 @@ async def handle_list_members(phone_number: str):
         await whatsapp_service.send_message(phone_number, message)
         
     except Exception as e:
-        await whatsapp_service.send_message(phone_number, f"Error listing members: {str(e)}") 
+        await whatsapp_service.send_message(phone_number, f"Error listing members: {str(e)}")
