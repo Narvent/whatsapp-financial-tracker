@@ -12,16 +12,17 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Load environment variables first
+load_dotenv()
+
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./financial_tracker.db")
 engine = create_engine(DATABASE_URL)
 
 from database import get_db
 from models import Base, Member, Contribution, Month
 from schemas import MemberCreate, ContributionCreate, MonthCreate
 from services import WhatsAppService, FinancialService
-
-# Load environment variables
-load_dotenv()
 
 # Create database tables (only if not in production or if database doesn't exist)
 try:
