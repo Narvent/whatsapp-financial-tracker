@@ -11,27 +11,13 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./financial_tracker.db")
 
 # Handle PostgreSQL URL for Render deployment
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-elif DATABASE_URL.startswith("postgresql+pg8000://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql+pg8000://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+pg8000://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
 
-# Create engine with better error handling and SSL support for Render
+# Create engine with better error handling
 try:
-    if DATABASE_URL.startswith("postgresql://"):
-        # Add SSL parameters for Render PostgreSQL
-        if "?" not in DATABASE_URL:
-            DATABASE_URL += "?sslmode=require"
-        else:
-            DATABASE_URL += "&sslmode=require"
-    
-    engine = create_engine(
-        DATABASE_URL, 
-        echo=False, 
-        pool_pre_ping=True,
-        connect_args={
-            "sslmode": "require"
-        } if DATABASE_URL.startswith("postgresql://") else {}
-    )
+    engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 except Exception as e:
     print(f"Warning: Could not create database engine: {e}")

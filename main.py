@@ -10,8 +10,12 @@ import requests
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
 
-from database import get_db, engine
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+
+from database import get_db
 from models import Base, Member, Contribution, Month
 from schemas import MemberCreate, ContributionCreate, MonthCreate
 from services import WhatsAppService, FinancialService
