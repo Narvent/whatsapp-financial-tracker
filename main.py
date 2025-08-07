@@ -1,6 +1,9 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Depends, Request, Form
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 import os
 import requests
@@ -28,43 +31,313 @@ financial_service = FinancialService()
 # Admin phone numbers (replace with actual admin phone numbers)
 ADMIN_PHONES = ["254700000000", "254711111111"]  # Add your admin phone numbers here
 
-@app.get("/")
-async def root():
-    return {"message": "WhatsApp Financial Tracker API"}
+# Templates
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request, db: Session = Depends(get_db)):
+    """Main dashboard page"""
+    try:
+        # Get statistics
+        total_members = db.query(Member).count()
+        total_months = db.query(Month).count()
+        total_contributions = db.query(Contribution).count()
+        
+        # Calculate total amount from all contributions
+        total_amount_result = db.query(Contribution).with_entities(
+            func.sum(Contribution.amount)
+        ).scalar()
+        total_amount = total_amount_result if total_amount_result is not None else 0
+        
+        recent_contributions = db.query(Contribution).order_by(Contribution.paid_at.desc()).limit(5).all()
+        
+        # Get members and months for forms
+        members = db.query(Member).all()
+        months = db.query(Month).all()
+        
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "total_members": total_members,
+            "total_months": total_months,
+            "total_contributions": total_contributions,
+            "total_amount": total_amount,
+            "recent_contributions": recent_contributions,
+            "members": members,
+            "months": months
+        })
+    except Exception as e:
+        print(f"Dashboard error: {str(e)}")
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": str(e)
+        })
+
+@app.get("/members", response_class=HTMLResponse)
+async def members_page(request: Request, db: Session = Depends(get_db)):
+    """Members management page"""
+    try:
+        members = db.query(Member).order_by(Member.category, Member.name).all()
+        
+        return templates.TemplateResponse("members.html", {
+            "request": request,
+            "members": members
+        })
+    except Exception as e:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": str(e)
+        })
+
+@app.get("/contributions", response_class=HTMLResponse)
+async def contributions_page(request: Request, db: Session = Depends(get_db)):
+    """Contributions management page"""
+    try:
+        contributions = db.query(Contribution).join(Member).join(Month).all()
+        members = db.query(Member).all()
+        months = db.query(Month).all()
+        
+        return templates.TemplateResponse("contributions.html", {
+            "request": request,
+            "contributions": contributions,
+            "members": members,
+            "months": months
+        })
+    except Exception as e:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": str(e)
+        })
+
+@app.get("/reports", response_class=HTMLResponse)
+async def reports_page(request: Request, db: Session = Depends(get_db)):
+    """Reports page"""
+    try:
+        months = db.query(Month).all()
+        members = db.query(Member).all()
+        contributions = db.query(Contribution).all()
+        
+        return templates.TemplateResponse("reports.html", {
+            "request": request,
+            "months": months,
+            "members": members,
+            "contributions": contributions
+        })
+    except Exception as e:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": str(e)
+        })
+
+# API endpoints for AJAX calls
+@app.post("/api/members")
+async def create_member_api(
+    name: str = Form(...),
+    category: str = Form(...),
+    default_amount: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Create a new member via API"""
+    try:
+        member = financial_service.add_member(db, name, category, default_amount)
+        return {"success": True, "member": {"id": member.id, "name": member.name, "category": member.category}}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/members/{member_id}")
+async def get_member_api(member_id: int, db: Session = Depends(get_db)):
+    """Get member details via API"""
+    try:
+        member = db.query(Member).filter(Member.id == member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Get member's contributions
+        contributions = db.query(Contribution).filter(Contribution.member_id == member_id).all()
+        contribution_data = []
+        for contrib in contributions:
+            month = db.query(Month).filter(Month.id == contrib.month_id).first()
+            contribution_data.append({
+                "month": month.name if month else "Unknown",
+                "amount": contrib.amount,
+                "paid": contrib.paid,
+                "paid_at": contrib.paid_at.isoformat() if contrib.paid_at else None
+            })
+        
+        return {
+            "success": True, 
+            "member": {
+                "id": member.id,
+                "name": member.name,
+                "category": member.category,
+                "default_amount": member.default_amount,
+                "contributions": contribution_data
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/api/members/{member_id}")
+async def update_member_api(
+    member_id: int,
+    name: str = Form(...),
+    category: str = Form(...),
+    default_amount: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Update member via API"""
+    try:
+        member = db.query(Member).filter(Member.id == member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        member.name = name
+        member.category = category
+        member.default_amount = default_amount
+        db.commit()
+        
+        return {"success": True, "message": "Member updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/members/{member_id}")
+async def delete_member_api(member_id: int, db: Session = Depends(get_db)):
+    """Delete member via API"""
+    try:
+        member = db.query(Member).filter(Member.id == member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+        
+        # Check if member has contributions
+        contributions = db.query(Contribution).filter(Contribution.member_id == member_id).count()
+        if contributions > 0:
+            raise HTTPException(status_code=400, detail="Cannot delete member with existing contributions")
+        
+        db.delete(member)
+        db.commit()
+        
+        return {"success": True, "message": "Member deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/contributions")
+async def create_contribution_api(
+    member_id: int = Form(...),
+    month_id: int = Form(...),
+    amount: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Create a new contribution via API"""
+    try:
+        member = db.query(Member).filter(Member.id == member_id).first()
+        month = db.query(Month).filter(Month.id == month_id).first()
+        
+        if not member or not month:
+            raise HTTPException(status_code=404, detail="Member or month not found")
+        
+        contribution = financial_service.mark_paid(db, member.name, month.name, amount)
+        return {"success": True, "contribution": {"id": contribution.id, "amount": contribution.amount}}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/contributions/{contribution_id}")
+async def delete_contribution_api(contribution_id: int, db: Session = Depends(get_db)):
+    """Delete contribution via API"""
+    try:
+        contribution = db.query(Contribution).filter(Contribution.id == contribution_id).first()
+        if not contribution:
+            raise HTTPException(status_code=404, detail="Contribution not found")
+        
+        # Get member and month names for the response
+        member = db.query(Member).filter(Member.id == contribution.member_id).first()
+        month = db.query(Month).filter(Month.id == contribution.month_id).first()
+        
+        member_name = member.name if member else "Unknown"
+        month_name = month.name if month else "Unknown"
+        
+        db.delete(contribution)
+        db.commit()
+        
+        return {
+            "success": True, 
+            "message": f"Contribution deleted successfully",
+            "details": {
+                "member": member_name,
+                "month": month_name,
+                "amount": contribution.amount
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/months")
+async def create_month_api(
+    name: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Create a new month via API"""
+    try:
+        month = financial_service.add_month(db, name)
+        return {"success": True, "month": {"id": month.id, "name": month.name}}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/reports/{month_name}")
+async def get_report_api(month_name: str, db: Session = Depends(get_db)):
+    """Get report for a specific month"""
+    try:
+        report = financial_service.generate_report(db, month_name)
+        return {"success": True, "report": report}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    """Handle WhatsApp webhook events"""
+    """Handle incoming WhatsApp messages via Twilio webhook"""
     try:
-        body = await request.json()
+        # Get form data from Twilio webhook
+        form_data = await request.form()
         
-        # Handle WhatsApp verification
-        if "hub_mode" in body and body["hub_mode"] == "subscribe":
-            if body["hub_verify_token"] == os.getenv("WHATSAPP_VERIFY_TOKEN"):
-                return int(body["hub_challenge"])
-            else:
-                raise HTTPException(status_code=403, detail="Invalid verify token")
+        # Extract message details from Twilio format
+        from_number = form_data.get("From", "")
+        to_number = form_data.get("To", "")
+        message_body = form_data.get("Body", "").strip()
         
-        # Handle incoming messages
-        if "entry" in body:
-            for entry in body["entry"]:
-                if "changes" in entry:
-                    for change in entry["changes"]:
-                        if change["value"].get("messages"):
-                            for message in change["value"]["messages"]:
-                                await process_message(message)
+        # Remove "whatsapp:" prefix if present
+        if from_number.startswith("whatsapp:"):
+            from_number = from_number[9:]  # Remove "whatsapp:" prefix
         
-        return {"status": "ok"}
-    
+        print(f"📱 Received message from {from_number}: {message_body}")
+        
+        # Check if sender is admin
+        if from_number not in ADMIN_PHONES:
+            await whatsapp_service.send_message(
+                from_number,
+                "❌ Sorry, you don't have permission to use this bot. Contact the administrator."
+            )
+            return {"success": True}
+        
+        # Process the message
+        await process_message({
+            "from": from_number,
+            "body": message_body
+        })
+        
+        return {"success": True}
+        
     except Exception as e:
-        print(f"Webhook error: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"❌ Webhook error: {e}")
+        return {"success": False, "error": str(e)}
 
 async def process_message(message):
     """Process incoming WhatsApp messages"""
     try:
         phone_number = message["from"]
-        text = message["text"]["body"].strip()
+        text = message["body"].strip()
         
         # Check if sender is admin
         if phone_number not in ADMIN_PHONES:
@@ -293,8 +566,4 @@ async def handle_list_members(phone_number: str):
         await whatsapp_service.send_message(phone_number, message)
         
     except Exception as e:
-        await whatsapp_service.send_message(phone_number, f"Error listing members: {str(e)}")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+        await whatsapp_service.send_message(phone_number, f"Error listing members: {str(e)}") 

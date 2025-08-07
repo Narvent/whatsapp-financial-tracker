@@ -1,42 +1,53 @@
 import os
-import requests
 import json
 from datetime import datetime
 from sqlalchemy.orm import Session
 from models import Member, Month, Contribution
 from dotenv import load_dotenv
+from twilio.rest import Client
+from twilio.base.exceptions import TwilioException
 
 load_dotenv()
 
 class WhatsAppService:
     def __init__(self):
-        self.access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
-        self.phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-        self.api_url = f"https://graph.facebook.com/v17.0/{self.phone_number_id}/messages"
+        self.account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        self.auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        self.phone_number = os.getenv("TWILIO_PHONE_NUMBER")
+        
+        if self.account_sid and self.auth_token:
+            self.client = Client(self.account_sid, self.auth_token)
+        else:
+            self.client = None
+            print("⚠️ Warning: Twilio credentials not found. WhatsApp messaging will be disabled.")
     
     async def send_message(self, to: str, message: str):
-        """Send WhatsApp message"""
+        """Send WhatsApp message via Twilio"""
         try:
-            headers = {
-                "Authorization": f"Bearer {self.access_token}",
-                "Content-Type": "application/json"
-            }
+            if not self.client:
+                print(f"📱 [SIMULATED] WhatsApp message to {to}: {message}")
+                return {"success": True, "message": "Simulated message sent"}
             
-            data = {
-                "messaging_product": "whatsapp",
-                "to": to,
-                "type": "text",
-                "text": {"body": message}
-            }
+            # Format phone number for WhatsApp
+            if not to.startswith("whatsapp:"):
+                to = f"whatsapp:{to}"
             
-            response = requests.post(self.api_url, headers=headers, json=data)
-            response.raise_for_status()
+            # Send message via Twilio
+            message_obj = self.client.messages.create(
+                from_=self.phone_number,
+                body=message,
+                to=to
+            )
             
-            return response.json()
-        
+            print(f"✅ WhatsApp message sent successfully: {message_obj.sid}")
+            return {"success": True, "sid": message_obj.sid}
+            
+        except TwilioException as e:
+            print(f"❌ Twilio error: {e}")
+            return {"success": False, "error": str(e)}
         except Exception as e:
-            print(f"Error sending WhatsApp message: {e}")
-            return None
+            print(f"❌ Error sending WhatsApp message: {e}")
+            return {"success": False, "error": str(e)}
 
 class FinancialService:
     def add_member(self, db: Session, name: str, category: str, default_amount: int) -> Member:
