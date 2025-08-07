@@ -2,6 +2,7 @@ services:
   - type: web
     name: whatsapp-financial-tracker
     env: python
+    pythonVersion: "3.11.8"
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -17,6 +18,8 @@ services:
         sync: false
       - key: ENVIRONMENT
         value: production
+      - key: PYTHON_VERSION
+        value: "3.11.8"
 
 databases:
   - name: whatsapp-financial-tracker-db

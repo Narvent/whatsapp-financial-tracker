@@ -4,12 +4,6 @@ from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 
-# Import psycopg2 explicitly to ensure it's available
-try:
-    import psycopg2
-except ImportError:
-    print("Warning: psycopg2 not available, falling back to SQLite")
-
 load_dotenv()
 
 # Database URL - will use environment variable or default to SQLite for local development
