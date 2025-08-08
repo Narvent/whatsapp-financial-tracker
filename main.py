@@ -367,24 +367,34 @@ async def process_message(message):
         
         command = parts[0].lower()
         
-        if command == "addmember":
+        if command == "addmember" or command == "1a":
             await handle_add_member(phone_number, parts[1:])
-        elif command == "markpaid":
+        elif command == "markpaid" or command == "2a":
             await handle_mark_paid(phone_number, parts[1:])
-        elif command == "report":
+        elif command == "report" or command == "2r":
             await handle_report(phone_number, parts[1:])
-        elif command == "addmonth":
+        elif command == "addmonth" or command == "3a":
             await handle_add_month(phone_number, parts[1:])
-        elif command == "help":
+        elif command in ["help", "5", "menu"]:
             await handle_help(phone_number)
-        elif command == "initdb":
+        elif command == "initdb" or command == "4i":
             await handle_init_db(phone_number)
-        elif command == "listmembers":
+        elif command in ["listmembers", "1", "members"]:
             await handle_list_members(phone_number)
+        elif command == "2":
+            await handle_list_contributions(phone_number)
+        elif command == "3":
+            await handle_list_months(phone_number)
+        elif command == "4" or command == "dashboard":
+            await handle_dashboard(phone_number)
+        elif command == "4s":
+            await handle_statistics(phone_number)
+        elif command == "5c":
+            await handle_examples(phone_number)
         else:
             await whatsapp_service.send_message(
                 phone_number,
-                "Unknown command. Type 'help' for available commands."
+                "❓ Unknown command. Type `menu` or `5` for the interactive menu."
             )
     
     except Exception as e:
@@ -511,31 +521,44 @@ async def handle_add_month(phone_number: str, args: List[str]):
 async def handle_help(phone_number: str):
     """Handle Help command"""
     help_text = """
-🤖 *WhatsApp Financial Tracker Commands*
+🤖 *WhatsApp Financial Tracker - Interactive Menu*
 
-*Admin Commands:*
-• `AddMember <Name> <Category> [Amount]` - Add new member
-  Categories: Parents (500 KES), GenMillennial/GenZ (300 KES), GenAlpha (50 KES)
+*Main Menu Options:*
+1️⃣ *Members Management*
+   • `1` - List all members
+   • `1a <Name> <Category>` - Add new member
+   • `1e <Name>` - Edit member
+   • `1d <Name>` - Delete member
 
-• `MarkPaid <Name> <Month> [Amount]` - Mark contribution as paid
+2️⃣ *Contributions*
+   • `2` - View all contributions
+   • `2a <Name> <Month> [Amount]` - Mark payment
+   • `2r <Month>` - Monthly report
 
-• `Report <Month>` - Generate monthly report
+3️⃣ *Months Management*
+   • `3` - List all months
+   • `3a <MonthName>` - Add new month
 
-• `AddMonth <MonthName>` - Add new month
+4️⃣ *Quick Actions*
+   • `4` - Dashboard overview
+   • `4i` - Initialize database
+   • `4s` - Statistics summary
 
-• `InitDB` - Initialize database with all members
+5️⃣ *Help & Support*
+   • `5` - Show this menu
+   • `5c` - Command examples
 
-• `ListMembers` - Show all members by category
-
-• `Help` - Show this help message
+*Quick Commands:*
+• `menu` - Show main menu
+• `dashboard` - Quick overview
+• `members` - List all members
+• `report <Month>` - Monthly report
 
 *Examples:*
-• `AddMember Pauline Parents`
-• `MarkPaid Pauline August 500`
-• `Report August`
-• `AddMonth September`
-• `InitDB`
-• `ListMembers`
+• `1a Pauline Parents` - Add Pauline to Parents category
+• `2a Pauline August 500` - Mark Pauline paid for August
+• `2r August` - August monthly report
+• `4` - Dashboard overview
 """
     await whatsapp_service.send_message(phone_number, help_text)
 
@@ -580,3 +603,150 @@ async def handle_list_members(phone_number: str):
         
     except Exception as e:
         await whatsapp_service.send_message(phone_number, f"Error listing members: {str(e)}")
+
+async def handle_list_contributions(phone_number: str):
+    """Handle ListContributions command - show all contributions"""
+    try:
+        db = next(get_db())
+        contributions = db.query(Contribution).join(Member).join(Month).order_by(Contribution.paid_at.desc()).all()
+        
+        if not contributions:
+            await whatsapp_service.send_message(phone_number, "📊 No contributions found in the database.")
+            return
+        
+        message = "💰 *ALL CONTRIBUTIONS*\n\n"
+        
+        for i, contribution in enumerate(contributions[:10], 1):  # Show last 10
+            message += f"{i}. {contribution.member.name} - {contribution.month.name} - {contribution.amount} KES\n"
+        
+        if len(contributions) > 10:
+            message += f"\n... and {len(contributions) - 10} more contributions"
+        
+        await whatsapp_service.send_message(phone_number, message)
+        
+    except Exception as e:
+        await whatsapp_service.send_message(phone_number, f"Error listing contributions: {str(e)}")
+
+async def handle_list_months(phone_number: str):
+    """Handle ListMonths command - show all months"""
+    try:
+        db = next(get_db())
+        months = db.query(Month).order_by(Month.name).all()
+        
+        if not months:
+            await whatsapp_service.send_message(phone_number, "📅 No months found in the database.")
+            return
+        
+        message = "📅 *ALL MONTHS*\n\n"
+        
+        for i, month in enumerate(months, 1):
+            message += f"{i}. {month.name}\n"
+        
+        await whatsapp_service.send_message(phone_number, message)
+        
+    except Exception as e:
+        await whatsapp_service.send_message(phone_number, f"Error listing months: {str(e)}")
+
+async def handle_dashboard(phone_number: str):
+    """Handle Dashboard command - show overview"""
+    try:
+        db = next(get_db())
+        
+        # Get statistics
+        total_members = db.query(Member).count()
+        total_months = db.query(Month).count()
+        total_contributions = db.query(Contribution).count()
+        
+        # Calculate total amount
+        total_amount_result = db.query(Contribution).with_entities(
+            func.sum(Contribution.amount)
+        ).scalar()
+        total_amount = total_amount_result if total_amount_result is not None else 0
+        
+        # Get recent contributions
+        recent_contributions = db.query(Contribution).join(Member).join(Month).order_by(Contribution.paid_at.desc()).limit(3).all()
+        
+        message = f"""
+📊 *DASHBOARD OVERVIEW*
+
+*Statistics:*
+👥 Total Members: {total_members}
+📅 Total Months: {total_months}
+💰 Total Contributions: {total_contributions}
+💵 Total Amount: {total_amount:,} KES
+
+*Recent Contributions:*
+"""
+        
+        for contribution in recent_contributions:
+            message += f"• {contribution.member.name} - {contribution.month.name} - {contribution.amount} KES\n"
+        
+        if not recent_contributions:
+            message += "No recent contributions"
+        
+        message += "\n*Quick Actions:*\n• `1` - View all members\n• `2` - View contributions\n• `2r <Month>` - Monthly report"
+        
+        await whatsapp_service.send_message(phone_number, message)
+        
+    except Exception as e:
+        await whatsapp_service.send_message(phone_number, f"Error generating dashboard: {str(e)}")
+
+async def handle_statistics(phone_number: str):
+    """Handle Statistics command - show detailed statistics"""
+    try:
+        db = next(get_db())
+        
+        # Get statistics by category
+        categories = db.query(Member.category, func.count(Member.id)).group_by(Member.category).all()
+        
+        # Get total contributions by month
+        monthly_contributions = db.query(Month.name, func.sum(Contribution.amount)).join(Contribution).group_by(Month.name).all()
+        
+        message = "📈 *DETAILED STATISTICS*\n\n"
+        
+        message += "*Members by Category:*\n"
+        for category, count in categories:
+            message += f"• {category}: {count} members\n"
+        
+        message += "\n*Contributions by Month:*\n"
+        for month, amount in monthly_contributions:
+            if amount:
+                message += f"• {month}: {amount:,} KES\n"
+            else:
+                message += f"• {month}: 0 KES\n"
+        
+        await whatsapp_service.send_message(phone_number, message)
+        
+    except Exception as e:
+        await whatsapp_service.send_message(phone_number, f"Error generating statistics: {str(e)}")
+
+async def handle_examples(phone_number: str):
+    """Handle Examples command - show command examples"""
+    examples = """
+📝 *COMMAND EXAMPLES*
+
+*Adding Members:*
+• `1a Pauline Parents` - Add Pauline to Parents category
+• `1a John GenMillennial` - Add John to GenMillennial category
+• `1a Sarah GenAlpha` - Add Sarah to GenAlpha category
+
+*Marking Payments:*
+• `2a Pauline August 500` - Mark Pauline paid 500 KES for August
+• `2a John July 300` - Mark John paid 300 KES for July
+• `2a Sarah September 50` - Mark Sarah paid 50 KES for September
+
+*Reports:*
+• `2r August` - Get August monthly report
+• `2r July` - Get July monthly report
+
+*Quick Actions:*
+• `4` - Dashboard overview
+• `1` - List all members
+• `2` - List all contributions
+• `3` - List all months
+
+*Navigation:*
+• `menu` or `5` - Show main menu
+• `dashboard` - Quick overview
+"""
+    await whatsapp_service.send_message(phone_number, examples)
