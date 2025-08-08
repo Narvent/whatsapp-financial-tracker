@@ -1,0 +1,5 @@
+[33mf1215f5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Update database configuration and deployment settings
+[33m8f3d223[m[33m ([m[1;31morigin/main[m[33m)[m Revert to original configuration - remove custom database code
+[33m3f2dc1c[m Fix database configuration order and runtime.txt
+[33m0ab6276[m Add custom database configuration to main.py
+[33m78ab3a3[m fix psycopg2 with python 3.11
