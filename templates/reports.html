@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Reports - WhatsApp Financial Tracker{% endblock %}
+{% block title %}Reports - Financial Tracker App{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -43,7 +43,7 @@
                             <div class="col-6">
                                 <div class="card bg-light">
                                     <div class="card-body text-center">
-                                        <h4 class="text-primary" id="totalMembers">-</h4>
+                                        <h4 class="text-primary" id="totalMembers">{{ members|length if members else 0 }}</h4>
                                         <small class="text-muted">Total Members</small>
                                     </div>
                                 </div>
@@ -51,7 +51,7 @@
                             <div class="col-6">
                                 <div class="card bg-light">
                                     <div class="card-body text-center">
-                                        <h4 class="text-success" id="totalContributions">-</h4>
+                                        <h4 class="text-success" id="totalContributions">{{ contributions|length if contributions else 0 }}</h4>
                                         <small class="text-muted">Total Contributions</small>
                                     </div>
                                 </div>
@@ -93,12 +93,8 @@ $(document).ready(function() {
 });
 
 function loadStats() {
-    // Get data from the page context - use proper Jinja2 syntax
-    const totalMembers = parseInt('{{ members|length if members else 0 }}');
-    const totalContributions = parseInt('{{ contributions|length if contributions else 0 }}');
-    
-    $('#totalMembers').text(totalMembers);
-    $('#totalContributions').text(totalContributions);
+    // Stats are already loaded from the server-side context
+    console.log('Stats loaded');
 }
 
 function generateReport() {
@@ -119,9 +115,11 @@ function generateReport() {
         </div>
     `);
     
+    // Make AJAX call to the API
     $.ajax({
         url: '/api/reports/' + encodeURIComponent(monthName),
         method: 'GET',
+        dataType: 'json',
         success: function(response) {
             if (response.success) {
                 displayReport(response.report, monthName);
@@ -134,11 +132,12 @@ function generateReport() {
                 `);
             }
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', xhr, status, error);
             $('#reportContent').html(`
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    Error generating report: ${xhr.responseJSON?.detail || 'Unknown error'}
+                    Error generating report: ${xhr.responseJSON?.detail || error || 'Unknown error'}
                 </div>
             `);
         }
@@ -148,7 +147,7 @@ function generateReport() {
 function displayReport(report, monthName) {
     // Parse the report text and format it nicely
     const reportLines = report.split('\n');
-    let html = `<h4>Report for ${monthName}</h4><hr>`;
+    let html = `<h4><i class="fas fa-chart-bar text-primary me-2"></i>Report for ${monthName}</h4><hr>`;
     
     reportLines.forEach(line => {
         if (line.trim()) {
@@ -159,9 +158,12 @@ function displayReport(report, monthName) {
             } else if (line.startsWith('•')) {
                 // List item
                 html += `<li>${line.substring(1).trim()}</li>`;
-            } else if (line.startsWith('📊') || line.startsWith('💰') || line.startsWith('✅')) {
+            } else if (line.startsWith('📊') || line.startsWith('💰') || line.startsWith('✅') || line.startsWith('🎂')) {
                 // Section headers
-                html += `<h6 class="mt-3 mb-2">${line}</h6>`;
+                html += `<h6 class="mt-3 mb-2 text-primary">${line}</h6>`;
+            } else if (line.includes('TOTAL:')) {
+                // Total amount
+                html += `<h5 class="mt-3 mb-2 text-success">${line}</h5>`;
             } else {
                 // Regular text
                 html += `<p class="mb-1">${line}</p>`;

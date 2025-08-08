@@ -333,6 +333,48 @@ async def get_report_api(month_name: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/api/stats")
+async def get_stats_api(db: Session = Depends(get_db)):
+    """Get overall statistics"""
+    try:
+        # Get basic stats
+        total_members = db.query(Member).count()
+        total_months = db.query(Month).count()
+        total_contributions = db.query(Contribution).count()
+        
+        # Calculate total amount
+        total_amount_result = db.query(Contribution).with_entities(
+            func.sum(Contribution.amount)
+        ).scalar()
+        total_amount = total_amount_result if total_amount_result is not None else 0
+        
+        # Get stats by category
+        categories = db.query(Member.category, func.count(Member.id)).group_by(Member.category).all()
+        
+        # Get recent contributions
+        recent_contributions = db.query(Contribution).join(Member).join(Month).order_by(Contribution.paid_at.desc()).limit(5).all()
+        
+        stats = {
+            "total_members": total_members,
+            "total_months": total_months,
+            "total_contributions": total_contributions,
+            "total_amount": total_amount,
+            "categories": [{"category": cat, "count": count} for cat, count in categories],
+            "recent_contributions": [
+                {
+                    "member_name": c.member.name,
+                    "month_name": c.month.name,
+                    "amount": c.amount,
+                    "paid_at": c.paid_at.isoformat() if c.paid_at else None
+                }
+                for c in recent_contributions
+            ]
+        }
+        
+        return {"success": True, "stats": stats}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
