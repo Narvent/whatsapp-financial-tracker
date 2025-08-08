@@ -10,6 +10,8 @@ import requests
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+from fastapi import WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db, engine
 from models import Base, Member, Contribution, Month
@@ -25,7 +27,41 @@ try:
 except Exception as e:
     print(f"Warning: Could not create database tables: {e}")
 
-app = FastAPI(title="WhatsApp Financial Tracker", version="1.0.0")
+app = FastAPI(title="Financial Tracker App", version="2.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                # Remove disconnected clients
+                self.active_connections.remove(connection)
+
+manager = ConnectionManager()
 
 # Initialize services
 whatsapp_service = WhatsAppService()
@@ -36,6 +72,9 @@ ADMIN_PHONES = ["+254741065862"]  # Your WhatsApp number with country code and +
 
 # Templates
 templates = Jinja2Templates(directory="templates")
+
+# Static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request, db: Session = Depends(get_db)):
@@ -750,3 +789,53 @@ async def handle_examples(phone_number: str):
 • `dashboard` - Quick overview
 """
     await whatsapp_service.send_message(phone_number, examples)
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            
+            # Broadcast the message to all connected clients
+            await manager.broadcast(json.dumps({
+                "type": "chat_message",
+                "message": message_data.get("message", ""),
+                "timestamp": datetime.now().isoformat(),
+                "user": message_data.get("user", "Anonymous")
+            }))
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(json.dumps({
+            "type": "user_left",
+            "message": "A user left the chat",
+            "timestamp": datetime.now().isoformat()
+        }))
+
+@app.get("/manifest.json")
+async def get_manifest():
+    """Serve PWA manifest"""
+    manifest = {
+        "name": "Financial Tracker App",
+        "short_name": "FinTracker",
+        "description": "A modern financial tracking application with real-time chat",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#25d366",
+        "theme_color": "#25d366",
+        "orientation": "portrait-primary",
+        "icons": [
+            {
+                "src": "/static/icons/icon-192x192.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": "/static/icons/icon-512x512.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    }
+    return JSONResponse(content=manifest)

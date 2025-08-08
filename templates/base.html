@@ -3,9 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WhatsApp Financial Tracker{% endblock %}</title>
+    <title>{% block title %}Financial Tracker App{% endblock %}</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#25d366">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Financial Tracker">
+    <meta name="msapplication-TileColor" content="#25d366">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    
+    <!-- Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #25d366;
@@ -13,43 +29,187 @@
             --accent-color: #34b7f1;
             --dark-color: #075e54;
             --light-color: #dcf8c6;
+            --chat-bg: #f0f2f5;
+            --chat-bubble-me: #dcf8c6;
+            --chat-bubble-other: #ffffff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
         
-        .navbar {
+        /* App-like Navigation */
+        .app-navbar {
             background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)) !important;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
         }
         
         .navbar-brand {
             font-weight: bold;
             color: white !important;
+            font-size: 1.5rem;
         }
         
         .nav-link {
             color: rgba(255,255,255,0.9) !important;
             transition: all 0.3s ease;
+            border-radius: 20px;
+            padding: 8px 16px !important;
+            margin: 0 5px;
         }
         
-        .nav-link:hover {
+        .nav-link:hover, .nav-link.active {
             color: white !important;
+            background: rgba(255,255,255,0.2);
             transform: translateY(-2px);
         }
         
+        /* Main Content */
         .main-content {
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             margin: 20px;
+            margin-top: 100px;
             padding: 30px;
             min-height: calc(100vh - 140px);
+            position: relative;
         }
         
+        /* Chat Interface */
+        .chat-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-header {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: var(--chat-bg);
+        }
+        
+        .chat-message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-end;
+        }
+        
+        .chat-message.me {
+            justify-content: flex-end;
+        }
+        
+        .chat-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            position: relative;
+        }
+        
+        .chat-bubble.me {
+            background: var(--chat-bubble-me);
+            color: #000;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-bubble.other {
+            background: var(--chat-bubble-other);
+            color: #000;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .chat-input {
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            background: #f0f2f5;
+        }
+        
+        .chat-input button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input button:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Chat Toggle Button */
+        .chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        
+        .chat-toggle:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Cards */
         .card {
             border: none;
             border-radius: 15px;
@@ -95,52 +255,59 @@
             opacity: 0.9;
         }
         
-        .table {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                margin: 10px;
+                margin-top: 80px;
+                padding: 20px;
+            }
+            
+            .chat-container {
+                width: 100%;
+                height: 100vh;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+            
+            .chat-header {
+                border-radius: 0;
+            }
         }
         
-        .table thead th {
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            font-weight: 600;
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
         }
         
-        .form-control {
-            border-radius: 10px;
-            border: 2px solid #e9ecef;
-            padding: 12px 15px;
-            transition: all 0.3s ease;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
         }
         
-        .alert {
-            border-radius: 10px;
-            border: none;
-        }
-        
-        .footer {
-            background: var(--dark-color);
-            color: white;
-            text-align: center;
-            padding: 20px;
-            margin-top: 50px;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg app-navbar">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="fab fa-whatsapp me-2"></i>
-                WhatsApp Financial Tracker
+                <i class="fas fa-chart-line me-2"></i>Financial Tracker
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -148,22 +315,22 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
                             <i class="fas fa-home me-1"></i>Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/members">
+                        <a class="nav-link {% if request.path == '/members' %}active{% endif %}" href="/members">
                             <i class="fas fa-users me-1"></i>Members
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/contributions">
+                        <a class="nav-link {% if request.path == '/contributions' %}active{% endif %}" href="/contributions">
                             <i class="fas fa-money-bill-wave me-1"></i>Contributions
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/reports">
+                        <a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports">
                             <i class="fas fa-chart-bar me-1"></i>Reports
                         </a>
                     </li>
@@ -173,22 +340,158 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="container-fluid">
-        <div class="main-content">
-            {% block content %}{% endblock %}
+    <div class="main-content fade-in">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button class="chat-toggle" onclick="toggleChat()">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <!-- Chat Container -->
+    <div class="chat-container" id="chatContainer" style="display: none;">
+        <div class="chat-header">
+            <div>
+                <h6 class="mb-0"><i class="fas fa-comments me-2"></i>Team Chat</h6>
+                <small>Real-time messaging</small>
+            </div>
+            <button class="btn btn-sm btn-light" onclick="toggleChat()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-message">
+                <div class="chat-bubble other">
+                    <strong>System:</strong> Welcome to the Financial Tracker team chat! Start chatting with your team members.
+                </div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 WhatsApp Financial Tracker. Built with ❤️ using FastAPI & Bootstrap</p>
-        </div>
-    </footer>
-
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <script>
+        // Chat functionality
+        let chatVisible = false;
+        let socket = null;
+        
+        function toggleChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            const chatToggle = document.querySelector('.chat-toggle');
+            
+            if (chatVisible) {
+                chatContainer.style.display = 'none';
+                chatToggle.style.display = 'block';
+            } else {
+                chatContainer.style.display = 'flex';
+                chatToggle.style.display = 'none';
+            }
+            
+            chatVisible = !chatVisible;
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage(message, 'me');
+                input.value = '';
+                
+                // Send to server
+                if (socket) {
+                    socket.emit('chat_message', {
+                        message: message,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
+        }
+        
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function addMessage(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender}`;
+            bubble.textContent = message;
+            
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Initialize WebSocket connection
+        function initChat() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to chat server');
+            });
+            
+            socket.on('chat_message', (data) => {
+                addMessage(data.message, 'other');
+            });
+            
+            socket.on('user_joined', (data) => {
+                addMessage(`${data.username} joined the chat`, 'other');
+            });
+            
+            socket.on('user_left', (data) => {
+                addMessage(`${data.username} left the chat`, 'other');
+            });
+        }
+        
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installButton = document.createElement('button');
+            installButton.textContent = 'Install App';
+            installButton.className = 'btn btn-primary position-fixed';
+            installButton.style.cssText = 'top: 20px; right: 20px; z-index: 1002;';
+            installButton.onclick = installApp;
+            document.body.appendChild(installButton);
+        });
+        
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('App installed');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initChat();
+        });
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html> 
