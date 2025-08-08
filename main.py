@@ -32,7 +32,7 @@ whatsapp_service = WhatsAppService()
 financial_service = FinancialService()
 
 # Admin phone numbers (replace with actual admin phone numbers)
-ADMIN_PHONES = ["254741065862"]  # Your WhatsApp number with country code
+ADMIN_PHONES = ["+254741065862"]  # Your WhatsApp number with country code and + prefix
 
 # Templates
 templates = Jinja2Templates(directory="templates")
@@ -321,9 +321,25 @@ async def webhook(request: Request):
             from_number = from_number[9:]  # Remove "whatsapp:" prefix
         
         print(f"📱 Received message from {from_number}: {message_body}")
+        print(f"🔍 Checking if {from_number} is in admin list: {ADMIN_PHONES}")
         
-        # Check if sender is admin
-        if from_number not in ADMIN_PHONES:
+        # Check if sender is admin (try different formats)
+        is_admin = False
+        possible_formats = [
+            from_number,
+            from_number.replace("+", ""),
+            from_number.replace("+", "").replace("254", "0"),
+            from_number.replace("+", "").replace("0", "254", 1) if from_number.startswith("0") else from_number
+        ]
+        
+        for phone_format in possible_formats:
+            if phone_format in ADMIN_PHONES:
+                is_admin = True
+                print(f"✅ Found admin match: {phone_format}")
+                break
+        
+        if not is_admin:
+            print(f"❌ Phone number {from_number} not found in admin list")
             await whatsapp_service.send_message(
                 from_number,
                 "❌ Sorry, you don't have permission to use this bot. Contact the administrator."
@@ -348,8 +364,21 @@ async def process_message(message):
         phone_number = message["from"]
         text = message["body"].strip()
         
-        # Check if sender is admin
-        if phone_number not in ADMIN_PHONES:
+        # Check if sender is admin (try different formats)
+        is_admin = False
+        possible_formats = [
+            phone_number,
+            phone_number.replace("+", ""),
+            phone_number.replace("+", "").replace("254", "0"),
+            phone_number.replace("+", "").replace("0", "254", 1) if phone_number.startswith("0") else phone_number
+        ]
+        
+        for phone_format in possible_formats:
+            if phone_format in ADMIN_PHONES:
+                is_admin = True
+                break
+        
+        if not is_admin:
             await whatsapp_service.send_message(
                 phone_number, 
                 "You are not authorized to use this system. Please contact an admin."
