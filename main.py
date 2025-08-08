@@ -32,7 +32,7 @@ whatsapp_service = WhatsAppService()
 financial_service = FinancialService()
 
 # Admin phone numbers (replace with actual admin phone numbers)
-ADMIN_PHONES = ["254700000000", "254711111111"]  # Add your admin phone numbers here
+ADMIN_PHONES = ["254741065862"]  # Your WhatsApp number with country code
 
 # Templates
 templates = Jinja2Templates(directory="templates")
