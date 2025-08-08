@@ -24,14 +24,14 @@
     
     <style>
         :root {
-            --primary-color: #2196F3;      /* Blue */
-            --secondary-color: #4CAF50;    /* Green */
-            --accent-color: #FF9800;       /* Orange */
-            --danger-color: #F44336;       /* Red */
-            --dark-color: #1976D2;         /* Dark Blue */
-            --light-color: #E3F2FD;        /* Light Blue */
+            --primary-color: #FF9800;      /* Orange */
+            --secondary-color: #F44336;    /* Red */
+            --accent-color: #FF5722;       /* Deep Orange */
+            --danger-color: #D32F2F;       /* Dark Red */
+            --dark-color: #E65100;         /* Dark Orange */
+            --light-color: #FFF3E0;        /* Light Orange */
             --chat-bg: #f5f5f5;
-            --chat-bubble-me: #E3F2FD;
+            --chat-bubble-me: #FFF3E0;
             --chat-bubble-other: #ffffff;
         }
         
@@ -42,7 +42,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #FF9800 0%, #F44336 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow-x: hidden;
@@ -234,11 +234,11 @@
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 10px 20px rgba(255, 152, 0, 0.3);
         }
         
         .btn-success {
-            background: linear-gradient(45deg, var(--secondary-color), #66BB6A);
+            background: linear-gradient(45deg, var(--primary-color), #FFB74D);
             border: none;
             border-radius: 25px;
             padding: 10px 25px;
@@ -247,7 +247,7 @@
         }
         
         .btn-warning {
-            background: linear-gradient(45deg, var(--accent-color), #FFB74D);
+            background: linear-gradient(45deg, var(--accent-color), #FF8A65);
             border: none;
             border-radius: 25px;
             padding: 10px 25px;
@@ -256,7 +256,7 @@
         }
         
         .btn-danger {
-            background: linear-gradient(45deg, var(--danger-color), #EF5350);
+            background: linear-gradient(45deg, var(--secondary-color), #EF5350);
             border: none;
             border-radius: 25px;
             padding: 10px 25px;
@@ -284,24 +284,24 @@
         }
         
         /* Color-coded sections */
-        .section-blue {
-            border-left: 4px solid var(--primary-color);
-            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
-        }
-        
-        .section-green {
-            border-left: 4px solid var(--secondary-color);
-            background: linear-gradient(135deg, #E8F5E8, #C8E6C9);
-        }
-        
         .section-orange {
-            border-left: 4px solid var(--accent-color);
-            background: linear-gradient(135deg, #FFF3E0, #FFCC80);
+            border-left: 4px solid var(--primary-color);
+            background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
         }
         
         .section-red {
-            border-left: 4px solid var(--danger-color);
+            border-left: 4px solid var(--secondary-color);
             background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        }
+        
+        .section-deep-orange {
+            border-left: 4px solid var(--accent-color);
+            background: linear-gradient(135deg, #FBE9E7, #FFCCBC);
+        }
+        
+        .section-dark-red {
+            border-left: 4px solid var(--danger-color);
+            background: linear-gradient(135deg, #FFCDD2, #EF9A9A);
         }
         
         /* Interactive elements */
@@ -314,7 +314,7 @@
         .interactive-card:hover {
             border-color: var(--primary-color);
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(33, 150, 243, 0.2);
+            box-shadow: 0 15px 35px rgba(255, 152, 0, 0.2);
         }
         
         /* PWA Install Button */
@@ -323,7 +323,7 @@
             top: 20px;
             right: 20px;
             z-index: 1002;
-            background: linear-gradient(45deg, var(--accent-color), var(--danger-color));
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
             color: white;
             border: none;
             border-radius: 25px;

@@ -864,8 +864,8 @@ async def get_manifest():
         "description": "A modern financial tracking application with real-time chat and interactive features",
         "start_url": "/",
         "display": "standalone",
-        "background_color": "#2196F3",
-        "theme_color": "#2196F3",
+        "background_color": "#FF9800",
+        "theme_color": "#FF9800",
         "orientation": "portrait-primary",
         "icons": [
             {
