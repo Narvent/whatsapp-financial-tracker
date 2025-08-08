@@ -24,13 +24,14 @@
     
     <style>
         :root {
-            --primary-color: #25d366;
-            --secondary-color: #128c7e;
-            --accent-color: #34b7f1;
-            --dark-color: #075e54;
-            --light-color: #dcf8c6;
-            --chat-bg: #f0f2f5;
-            --chat-bubble-me: #dcf8c6;
+            --primary-color: #2196F3;      /* Blue */
+            --secondary-color: #4CAF50;    /* Green */
+            --accent-color: #FF9800;       /* Orange */
+            --danger-color: #F44336;       /* Red */
+            --dark-color: #1976D2;         /* Dark Blue */
+            --light-color: #E3F2FD;        /* Light Blue */
+            --chat-bg: #f5f5f5;
+            --chat-bubble-me: #E3F2FD;
             --chat-bubble-other: #ffffff;
         }
         
@@ -233,7 +234,34 @@
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);
+            box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, var(--secondary-color), #66BB6A);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, var(--accent-color), #FFB74D);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger-color), #EF5350);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
         
         .stats-card {
@@ -255,6 +283,68 @@
             opacity: 0.9;
         }
         
+        /* Color-coded sections */
+        .section-blue {
+            border-left: 4px solid var(--primary-color);
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+        }
+        
+        .section-green {
+            border-left: 4px solid var(--secondary-color);
+            background: linear-gradient(135deg, #E8F5E8, #C8E6C9);
+        }
+        
+        .section-orange {
+            border-left: 4px solid var(--accent-color);
+            background: linear-gradient(135deg, #FFF3E0, #FFCC80);
+        }
+        
+        .section-red {
+            border-left: 4px solid var(--danger-color);
+            background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        }
+        
+        /* Interactive elements */
+        .interactive-card {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .interactive-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(33, 150, 243, 0.2);
+        }
+        
+        /* PWA Install Button */
+        .pwa-install-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1002;
+            background: linear-gradient(45deg, var(--accent-color), var(--danger-color));
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .pwa-install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
         /* Responsive Design */
         @media (max-width: 768px) {
             .main-content {
@@ -273,6 +363,13 @@
             
             .chat-header {
                 border-radius: 0;
+            }
+            
+            .pwa-install-btn {
+                top: 10px;
+                right: 10px;
+                padding: 8px 16px;
+                font-size: 0.9rem;
             }
         }
         
@@ -466,13 +563,16 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // Show install button
+            // Show install button with better styling
             const installButton = document.createElement('button');
             installButton.textContent = '📱 Install App';
-            installButton.className = 'btn btn-primary position-fixed';
-            installButton.style.cssText = 'top: 20px; right: 20px; z-index: 1002; padding: 10px 20px; border-radius: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);';
+            installButton.className = 'pwa-install-btn';
             installButton.onclick = installApp;
+            installButton.title = 'Install Financial Tracker as a mobile app';
             document.body.appendChild(installButton);
+            
+            // Add a notification
+            showNotification('🎉 App ready to install! Click the orange button to install.');
         });
         
         function installApp() {
@@ -480,17 +580,66 @@
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        console.log('App installed');
+                        console.log('App installed successfully!');
+                        showNotification('✅ App installed successfully! You can now use it like a native app.');
                         // Remove the install button
-                        const installButton = document.querySelector('.btn-primary.position-fixed');
+                        const installButton = document.querySelector('.pwa-install-btn');
                         if (installButton) {
                             installButton.remove();
                         }
+                    } else {
+                        showNotification('❌ App installation was cancelled.');
                     }
                     deferredPrompt = null;
                 });
+            } else {
+                showNotification('ℹ️ App installation not available. Try refreshing the page.');
             }
         }
+        
+        function showNotification(message) {
+            // Create a notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 1003;
+                max-width: 300px;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 5000);
+        }
+        
+        // Add slide animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
         
         // Service Worker Registration
         if ('serviceWorker' in navigator) {

@@ -861,11 +861,11 @@ async def get_manifest():
     manifest = {
         "name": "Financial Tracker App",
         "short_name": "FinTracker",
-        "description": "A modern financial tracking application with real-time chat",
+        "description": "A modern financial tracking application with real-time chat and interactive features",
         "start_url": "/",
         "display": "standalone",
-        "background_color": "#25d366",
-        "theme_color": "#25d366",
+        "background_color": "#2196F3",
+        "theme_color": "#2196F3",
         "orientation": "portrait-primary",
         "icons": [
             {
@@ -878,6 +878,11 @@ async def get_manifest():
                 "sizes": "512x512",
                 "type": "image/png"
             }
-        ]
+        ],
+        "categories": ["finance", "productivity", "business"],
+        "lang": "en",
+        "dir": "ltr",
+        "scope": "/",
+        "prefer_related_applications": False
     }
     return JSONResponse(content=manifest)
